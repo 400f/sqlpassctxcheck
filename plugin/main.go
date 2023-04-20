@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/resessh/sqlpassctxcheck"
+	"github.com/400f/sqlpassctxcheck"
 	"golang.org/x/tools/go/analysis"
 )
 

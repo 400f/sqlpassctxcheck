@@ -3,8 +3,8 @@ package sqlpassctxcheck_test
 import (
 	"testing"
 
+	"github.com/400f/sqlpassctxcheck"
 	"github.com/gostaticanalysis/testutil"
-	"github.com/resessh/sqlpassctxcheck"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 

@@ -6,7 +6,7 @@ Using this tool, you can avoid falling outside of distributed tracing by forgett
 ## Install
 
 ```
-go install github.com/resessh/sqlpassctxcheck/cmd/sqlpassctxcheck@latest
+go install github.com/400f/sqlpassctxcheck/cmd/sqlpassctxcheck@latest
 ```
 
 ## Usage

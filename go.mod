@@ -1,4 +1,4 @@
-module github.com/resessh/sqlpassctxcheck
+module github.com/400f/sqlpassctxcheck
 
 go 1.19
 
