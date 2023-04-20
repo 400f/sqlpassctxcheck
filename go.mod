@@ -1,6 +1,6 @@
 module github.com/400f/sqlpassctxcheck
 
-go 1.19
+go 1.20
 
 require (
 	github.com/golangci/golangci-lint v1.50.1
