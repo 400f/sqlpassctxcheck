@@ -1,266 +1,333 @@
 package sqlpassctxcheck
 
+import (
+	"go/types"
+
+	"github.com/gostaticanalysis/analysisutil"
+	"golang.org/x/tools/go/analysis"
+)
+
 type restrictedMethodCall struct {
+	PackagePath         string
 	ReceiverType        string
 	MethodName          string
 	AlternateMethodName string
 }
 
-type restrictedMethodCallList []restrictedMethodCall
-
-func (r restrictedMethodCallList) get(receiverType, methodName string) (*restrictedMethodCall, bool) {
-	for _, restrictedMethodCall := range r {
-		if restrictedMethodCall.ReceiverType == receiverType &&
-			restrictedMethodCall.MethodName == methodName {
-			return &restrictedMethodCall, true
-		}
-	}
-	return nil, false
+var restrictedSqlModuleMethods = []restrictedMethodCall{
+	// sql
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "Begin",
+		AlternateMethodName: "BeginTx",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "Exec",
+		AlternateMethodName: "ExecContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "Ping",
+		AlternateMethodName: "PingContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "Prepare",
+		AlternateMethodName: "PrepareContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "Query",
+		AlternateMethodName: "QueryContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "DB",
+		MethodName:          "QueryRow",
+		AlternateMethodName: "QueryRowContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Stmt",
+		MethodName:          "Exec",
+		AlternateMethodName: "ExecContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Stmt",
+		MethodName:          "Query",
+		AlternateMethodName: "QueryContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Stmt",
+		MethodName:          "QueryRow",
+		AlternateMethodName: "QueryRowContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Tx",
+		MethodName:          "Exec",
+		AlternateMethodName: "ExecContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Tx",
+		MethodName:          "Prepare",
+		AlternateMethodName: "PrepareContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Tx",
+		MethodName:          "Query",
+		AlternateMethodName: "QueryContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Tx",
+		MethodName:          "QueryRow",
+		AlternateMethodName: "QueryRowContext",
+	},
+	{
+		PackagePath:         string(sql),
+		ReceiverType:        "Tx",
+		MethodName:          "Stmt",
+		AlternateMethodName: "StmtContext",
+	},
+	// sqlx
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "Beginx",
+		AlternateMethodName: "BeginTxx",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "Get",
+		AlternateMethodName: "GetContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "MustBegin",
+		AlternateMethodName: "MustBeginTx",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "MustExec",
+		AlternateMethodName: "MustExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "NamedExec",
+		AlternateMethodName: "NamedExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "NamedQuery",
+		AlternateMethodName: "NamedQueryContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "PrepareNamed",
+		AlternateMethodName: "PrepareNamedContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "Preparex",
+		AlternateMethodName: "PreparexContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "QueryRowx",
+		AlternateMethodName: "QueryRowxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "Queryx",
+		AlternateMethodName: "QueryxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "DB",
+		MethodName:          "Select",
+		AlternateMethodName: "SelectContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "Exec",
+		AlternateMethodName: "ExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "Get",
+		AlternateMethodName: "GetContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "MustExec",
+		AlternateMethodName: "MustExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "Query",
+		AlternateMethodName: "QueryContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "QueryRow",
+		AlternateMethodName: "QueryRowContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "QueryRowx",
+		AlternateMethodName: "QueryRowxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "Queryx",
+		AlternateMethodName: "QueryxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "NamedStmt",
+		MethodName:          "Select",
+		AlternateMethodName: "SelectContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Stmt",
+		MethodName:          "Get",
+		AlternateMethodName: "GetContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Stmt",
+		MethodName:          "MustExec",
+		AlternateMethodName: "MustExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Stmt",
+		MethodName:          "QueryRowx",
+		AlternateMethodName: "QueryRowxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Stmt",
+		MethodName:          "Queryx",
+		AlternateMethodName: "QueryxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Stmt",
+		MethodName:          "Select",
+		AlternateMethodName: "SelectContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "Get",
+		AlternateMethodName: "GetContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "MustExec",
+		AlternateMethodName: "MustExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "NamedExec",
+		AlternateMethodName: "NamedExecContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "NamedStmt",
+		AlternateMethodName: "NamedStmtContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "PrepareNamed",
+		AlternateMethodName: "PrepareNamedContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "Preparex",
+		AlternateMethodName: "PreparexContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "QueryRowx",
+		AlternateMethodName: "QueryRowxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "Queryx",
+		AlternateMethodName: "QueryxContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "Select",
+		AlternateMethodName: "SelectContext",
+	},
+	{
+		PackagePath:         string(sqlx),
+		ReceiverType:        "Tx",
+		MethodName:          "Stmtx",
+		AlternateMethodName: "StmtxContext",
+	},
 }
 
-var sqlModuleRestrictedMethodMap = map[sqlPackage]restrictedMethodCallList{
-	sql: {
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Begin",
-			AlternateMethodName: "BeginTx",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Exec",
-			AlternateMethodName: "ExecContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Ping",
-			AlternateMethodName: "PingContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Prepare",
-			AlternateMethodName: "PrepareContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Query",
-			AlternateMethodName: "QueryContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "QueryRow",
-			AlternateMethodName: "QueryRowContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "Exec",
-			AlternateMethodName: "ExecContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "Query",
-			AlternateMethodName: "QueryContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "QueryRow",
-			AlternateMethodName: "QueryRowContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Exec",
-			AlternateMethodName: "ExecContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Prepare",
-			AlternateMethodName: "PrepareContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Query",
-			AlternateMethodName: "QueryContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "QueryRow",
-			AlternateMethodName: "QueryRowContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Stmt",
-			AlternateMethodName: "StmtContext",
-		},
-	},
-	sqlx: {
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Beginx",
-			AlternateMethodName: "BeginTxx",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Get",
-			AlternateMethodName: "GetContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "MustBegin",
-			AlternateMethodName: "MustBeginTx",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "MustExec",
-			AlternateMethodName: "MustExecContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "NamedExec",
-			AlternateMethodName: "NamedExecContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "NamedQuery",
-			AlternateMethodName: "NamedQueryContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "PrepareNamed",
-			AlternateMethodName: "PrepareNamedContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Preparex",
-			AlternateMethodName: "PreparexContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "QueryRowx",
-			AlternateMethodName: "QueryRowxContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Queryx",
-			AlternateMethodName: "QueryxContext",
-		},
-		{
-			ReceiverType:        "DB",
-			MethodName:          "Select",
-			AlternateMethodName: "SelectContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "Exec",
-			AlternateMethodName: "ExecContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "Get",
-			AlternateMethodName: "GetContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "MustExec",
-			AlternateMethodName: "MustExecContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "Query",
-			AlternateMethodName: "QueryContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "QueryRow",
-			AlternateMethodName: "QueryRowContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "QueryRowx",
-			AlternateMethodName: "QueryRowxContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "Queryx",
-			AlternateMethodName: "QueryxContext",
-		},
-		{
-			ReceiverType:        "NamedStmt",
-			MethodName:          "Select",
-			AlternateMethodName: "SelectContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "Get",
-			AlternateMethodName: "GetContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "MustExec",
-			AlternateMethodName: "MustExecContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "QueryRowx",
-			AlternateMethodName: "QueryRowxContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "Queryx",
-			AlternateMethodName: "QueryxContext",
-		},
-		{
-			ReceiverType:        "Stmt",
-			MethodName:          "Select",
-			AlternateMethodName: "SelectContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Get",
-			AlternateMethodName: "GetContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "MustExec",
-			AlternateMethodName: "MustExecContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "NamedExec",
-			AlternateMethodName: "NamedExecContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "NamedStmt",
-			AlternateMethodName: "NamedStmtContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "PrepareNamed",
-			AlternateMethodName: "PrepareNamedContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Preparex",
-			AlternateMethodName: "PreparexContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "QueryRowx",
-			AlternateMethodName: "QueryRowxContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Queryx",
-			AlternateMethodName: "QueryxContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Select",
-			AlternateMethodName: "SelectContext",
-		},
-		{
-			ReceiverType:        "Tx",
-			MethodName:          "Stmtx",
-			AlternateMethodName: "StmtxContext",
-		},
-	},
+type restrictedMethod struct {
+	method     *types.Func
+	definition restrictedMethodCall
+}
+
+func getRestrictedMethodFuncList(pass *analysis.Pass) []restrictedMethod {
+	fs := make([]restrictedMethod, 0, len(restrictedSqlModuleMethods))
+
+	for _, m := range restrictedSqlModuleMethods {
+		t := analysisutil.TypeOf(pass, m.PackagePath, m.ReceiverType)
+		if t == nil {
+			continue
+		}
+
+		method := analysisutil.MethodOf(t, m.MethodName)
+		if method != nil {
+			fs = append(fs, restrictedMethod{
+				method:     method,
+				definition: m,
+			})
+		}
+	}
+	return fs
 }

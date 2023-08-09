@@ -2,88 +2,50 @@ package sqlpassctxcheck
 
 import (
 	"fmt"
-	"go/ast"
 
+	"github.com/gostaticanalysis/analysisutil"
 	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/passes/buildssa"
 )
 
 var Analyzer = &analysis.Analyzer{
 	Name: "sqlpassctxcheck",
 	Doc:  "check for sql module method call without ctx",
 	Run:  run,
+	Requires: []*analysis.Analyzer{
+		buildssa.Analyzer,
+	},
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	for _, file := range pass.Files {
-		sqlModuleAlias := getSqlModuleAlias(file)
-
-		ast.Inspect(file, func(n ast.Node) bool {
-			// ここから
-			if call, ok := n.(*ast.CallExpr); ok {
-				if fun, ok := call.Fun.(*ast.SelectorExpr); ok {
-					if funx, ok := fun.X.(*ast.Ident); ok {
-						if funx.Obj != nil {
-							if funxobjdecl, ok := funx.Obj.Decl.(*ast.Field); ok {
-								if funxobjdecltype, ok := funxobjdecl.Type.(*ast.StarExpr); ok {
-									if funxobjdecltypex, ok := funxobjdecltype.X.(*ast.SelectorExpr); ok {
-										if funxobjdecltypexx, ok := funxobjdecltypex.X.(*ast.Ident); ok {
-											var sqlModuleOfReceiver sqlPackage
-											if funxobjdecltypexx.Name == sqlModuleAlias[sql] {
-												sqlModuleOfReceiver = sql
-											} else if funxobjdecltypexx.Name == sqlModuleAlias[sqlx] {
-												sqlModuleOfReceiver = sqlx
-											}
-
-											if restricted, ok := sqlModuleRestrictedMethodMap[sqlModuleOfReceiver].get(funxobjdecltypex.Sel.Name, fun.Sel.Name); ok {
-												pass.Report(analysis.Diagnostic{
-													Pos: call.Pos(),
-													End: call.End(),
-													Message: fmt.Sprintf(
-														"use (*%s.%s).%s instead of (*%s.%s).%s",
-														sqlModuleAlias[sqlModuleOfReceiver],
-														restricted.ReceiverType,
-														restricted.AlternateMethodName,
-														sqlModuleAlias[sqlModuleOfReceiver],
-														restricted.ReceiverType,
-														restricted.MethodName,
-													),
-												})
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			return true
-		})
-	}
-	return nil, nil
-}
-
-type sqlModuleAliasMap map[sqlPackage]string
-
-func getSqlModuleAlias(file *ast.File) sqlModuleAliasMap {
-	sqlModuleAlias := sqlModuleAliasMap{
-		sql:  "sql",
-		sqlx: "sqlx",
+	s, ok := pass.ResultOf[buildssa.Analyzer].(*buildssa.SSA)
+	if !ok {
+		return nil, fmt.Errorf("failed to get SSA")
 	}
 
-	for _, decl := range file.Decls {
-		if gendecl, ok := decl.(*ast.GenDecl); ok {
-			for _, spec := range gendecl.Specs {
-				if importSpec, ok := spec.(*ast.ImportSpec); ok {
-					for _, sqlPackage := range allSqlPackage {
-						if importSpec.Name != nil &&
-							importSpec.Path.Value == sqlModuleImportPathMap[sqlPackage] {
-							sqlModuleAlias[sqlPackage] = importSpec.Name.Name
-						}
+	restrictedMethods := getRestrictedMethodFuncList(pass)
+	pass.Report = analysisutil.ReportWithoutIgnore(pass)
+	for _, sf := range s.SrcFuncs {
+		for _, b := range sf.Blocks {
+			for _, instr := range b.Instrs {
+				for _, m := range restrictedMethods {
+					if analysisutil.Called(instr, nil, m.method) {
+						pass.Reportf(
+							instr.Pos(),
+							"use (*%s.%s).%s instead of (*%s.%s).%s",
+
+							m.definition.PackagePath,
+							m.definition.ReceiverType,
+							m.definition.AlternateMethodName,
+							m.definition.PackagePath,
+							m.definition.ReceiverType,
+							m.definition.MethodName,
+						)
+						break
 					}
 				}
 			}
 		}
 	}
-	return sqlModuleAlias
+	return nil, nil
 }

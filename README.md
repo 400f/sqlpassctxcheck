@@ -29,5 +29,10 @@ func Call(db *sql.DB)  {
 ```
 $ go vet -vettool=(which sqlpassctxcheck) ./...
 
-main.go:6:15 use (*sql.DB).QueryContext instead of (*sql.DB).Query
+main.go:6:15 use (*database/sql.DB).QueryContext instead of (*database/sql.DB).Query
+```
+
+## Develop
+```sh
+$ go test -v ./
 ```

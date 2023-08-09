@@ -7,9 +7,9 @@ import (
 )
 
 func CallSql(db *aliasedsql.DB) {
-	db.Query("SELECT 1") // want `use \(\*aliasedsql\.DB\)\.QueryContext instead of \(\*aliasedsql\.DB\)\.Query`
+	db.Query("SELECT 1") // want `use \(\*database\/sql\.DB\)\.QueryContext instead of \(\*database\/sql\.DB\)\.Query`
 }
 
 func CallSqlx(db *aliasedsqlx.DB) {
-	db.Queryx("SELECT 1") // want `use \(\*aliasedsqlx\.DB\)\.QueryxContext instead of \(\*aliasedsqlx\.DB\)\.Queryx`
+	db.Queryx("SELECT 1") // want `use \(\*github.com\/jmoiron\/sqlx\.DB\)\.QueryxContext instead of \(\*github.com\/jmoiron\/sqlx\.DB\)\.Queryx`
 }
