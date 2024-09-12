@@ -1,6 +1,6 @@
 module github.com/400f/sqlpassctxcheck
 
-go 1.20
+go 1.23
 
 require (
 	github.com/gostaticanalysis/analysisutil v0.7.1
